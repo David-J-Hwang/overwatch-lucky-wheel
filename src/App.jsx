@@ -659,7 +659,7 @@ function ItemEditor({
         </label>
         <button
           type="submit"
-          className="min-h-11 self-end rounded-lg bg-slate-950 px-4 font-black text-white transition hover:bg-orange-600 disabled:opacity-50"
+          className="min-h-11 self-end rounded-lg bg-orange-500 px-4 font-black text-white transition hover:bg-slate-950 active:bg-slate-950 disabled:opacity-50"
           disabled={isSpinning || items.length >= maxItemCount}
         >
           추가
