@@ -142,6 +142,30 @@ function getEvenPercentWeights(itemCount) {
   return weights;
 }
 
+function getItemNamePlaceholder(drawType, selectedRoleId) {
+  if (drawType === "role") {
+    return "예: 돌격군";
+  }
+
+  if (drawType === "allHeroes") {
+    return "예: 레킹볼";
+  }
+
+  if (drawType === "roleHeroes") {
+    if (selectedRoleId === "damage") {
+      return "예: 겐지";
+    }
+
+    if (selectedRoleId === "support") {
+      return "예: 루시우";
+    }
+
+    return "예: 라인하르트";
+  }
+
+  return "예: 랜덤 듀오";
+}
+
 function App() {
   const [drawType, setDrawType] = useState("role");
   const [selectedRoleId, setSelectedRoleId] = useState("tank");
@@ -383,6 +407,7 @@ function App() {
             />
 
             <ItemEditor
+              drawType={drawType}
               drawTypeName={selectedDrawType?.name ?? ""}
               inputMode={inputMode}
               isSpinning={isSpinning}
@@ -399,6 +424,7 @@ function App() {
               onRemoveItem={removeItem}
               onResetPreset={() => replaceItems()}
               onUpdateItemWeight={updateItemWeight}
+              selectedRoleId={selectedRoleId}
               totalWeight={totalWeight}
             />
           </div>
@@ -492,14 +518,18 @@ function DrawTypeSelector({
                 type="button"
                 className={`rounded-lg border px-4 py-3 text-left transition ${
                   active
-                    ? "border-slate-900 bg-slate-950 text-white"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                    ? "border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-200"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50"
                 }`}
                 disabled={isSpinning}
                 onClick={() => onRoleChange(role.id)}
               >
                 <span className="block text-sm font-black">{role.name}</span>
-                <span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 ${role.softColor}`}>
+                <span
+                  className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 ${
+                    active ? "bg-white/20 text-white ring-white/40" : role.softColor
+                  }`}
+                >
                   {role.count}명
                 </span>
               </button>
@@ -512,6 +542,7 @@ function DrawTypeSelector({
 }
 
 function ItemEditor({
+  drawType,
   drawTypeName,
   inputMode,
   isSpinning,
@@ -528,23 +559,27 @@ function ItemEditor({
   onRemoveItem,
   onResetPreset,
   onUpdateItemWeight,
+  selectedRoleId,
   totalWeight,
 }) {
+  const itemNamePlaceholder = getItemNamePlaceholder(drawType, selectedRoleId);
   const valueLabel = inputMode === "percent" ? "당첨 확률(%)" : "당첨 개수";
   const valuePlaceholder = inputMode === "percent" ? "예: 25" : "예: 3";
-  const modeSummary =
-    inputMode === "percent"
-      ? `항목 ${items.length}/${maxItemCount}개 · 확률 합계 ${formatNumber(totalWeight)}%`
-      : `항목 ${items.length}/${maxItemCount}개 · 총 ${formatNumber(totalWeight)}개`;
+  const totalLabel = inputMode === "percent" ? "확률 합계" : "총 당첨 개수";
+  const totalValue = inputMode === "percent" ? `${formatNumber(totalWeight)}%` : `${formatNumber(totalWeight)}개`;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">항목 설정</h2>
-          <p className="mt-1 text-sm font-semibold text-slate-500">
-            {drawTypeName} · {modeSummary}
-          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-sm font-black">
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{drawTypeName}</span>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">등록 항목 {items.length}개</span>
+            <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700">
+              {totalLabel} {totalValue}
+            </span>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 text-sm font-black">
           <button
@@ -604,7 +639,7 @@ function ItemEditor({
             disabled={isSpinning || items.length >= maxItemCount}
             maxLength={32}
             onChange={(event) => onNewItemNameChange(event.target.value)}
-            placeholder="예: 랜덤 듀오"
+            placeholder={itemNamePlaceholder}
             type="text"
             value={newItemName}
           />
@@ -682,7 +717,7 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-500">{item.subtitle}</span>
           )}
         </div>
-        <p className="mt-1 text-sm font-semibold text-slate-500">실제 확률 {formatPercent(actualPercent)}</p>
+        <p className="mt-1 text-sm font-semibold text-slate-500">당첨확률 {formatPercent(actualPercent)}</p>
       </div>
 
       <label className="col-span-2 grid min-w-0 gap-1 self-center text-xs font-black text-slate-500 md:col-span-1 md:flex md:items-center">
@@ -692,7 +727,7 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
           className="min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm font-black text-slate-950 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
           disabled={isSpinning}
           min="0.01"
-          onChange={(event) => onUpdateItemWeight(item.id, Number(event.target.value))}
+          onChange={(event) => onUpdateItemWeight(item.id, event.target.value)}
           step="0.01"
           type="number"
           value={item.weight}
@@ -779,7 +814,7 @@ function WheelPanel({
         {winner ? (
           <>
             <strong className="mt-2 break-words text-3xl font-black text-slate-950">{winner.name}</strong>
-            <span className="mt-2 text-sm font-black text-orange-600">실제 확률 {formatPercent(winnerPercent)}</span>
+            <span className="mt-2 text-sm font-black text-orange-600">당첨확률 {formatPercent(winnerPercent)}</span>
           </>
         ) : (
           <>
