@@ -65,6 +65,10 @@ function isPercentTotalComplete(totalWeight) {
 }
 
 function getItemColor(item, index, isRoleDraw) {
+  if (item.color) {
+    return item.color;
+  }
+
   if (isRoleDraw && item.roleId) {
     return getRoleById(item.roleId)?.color ?? segmentColors[index % segmentColors.length];
   }
@@ -589,11 +593,14 @@ function ItemEditor({
         </button>
       </div>
 
-      <form className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px_110px]" onSubmit={onAddItem}>
-        <label className="grid gap-1 text-sm font-black text-slate-700">
+      <form
+        className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(120px,150px)_110px]"
+        onSubmit={onAddItem}
+      >
+        <label className="grid min-w-0 gap-1 text-sm font-black text-slate-700">
           항목 이름
           <input
-            className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-semibold outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
+            className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 font-semibold outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
             disabled={isSpinning || items.length >= maxItemCount}
             maxLength={32}
             onChange={(event) => onNewItemNameChange(event.target.value)}
@@ -602,10 +609,10 @@ function ItemEditor({
             value={newItemName}
           />
         </label>
-        <label className="grid gap-1 text-sm font-black text-slate-700">
+        <label className="grid min-w-0 gap-1 text-sm font-black text-slate-700">
           {valueLabel}
           <input
-            className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-semibold outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
+            className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 font-semibold outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
             disabled={isSpinning || items.length >= maxItemCount}
             min="0.01"
             onChange={(event) => onNewItemWeightChange(event.target.value)}
@@ -657,10 +664,10 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
   const actualPercent = totalWeight > 0 ? (Number(item.weight) / totalWeight) * 100 : 0;
 
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[auto_minmax(0,1fr)_124px_auto] sm:items-center">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(96px,116px)_72px] md:items-center">
       <span
         className="mt-1 h-10 w-3 rounded-full sm:mt-0"
-        style={{ backgroundColor: getItemColor(item, itemIndex, false) }}
+        style={{ backgroundColor: getItemColor(item, itemIndex, item.source === "preset") }}
         aria-hidden="true"
       />
       <div className="min-w-0">
@@ -678,10 +685,11 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
         <p className="mt-1 text-sm font-semibold text-slate-500">실제 확률 {formatPercent(actualPercent)}</p>
       </div>
 
-      <label className="col-span-2 grid gap-1 text-xs font-black text-slate-500 sm:col-span-1">
-        {inputMode === "percent" ? "확률" : "개수"}
+      <label className="col-span-2 grid min-w-0 gap-1 self-center text-xs font-black text-slate-500 md:col-span-1 md:flex md:items-center">
+        <span className="md:sr-only">{inputMode === "percent" ? "확률" : "개수"}</span>
         <input
-          className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-black text-slate-950 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
+          aria-label={inputMode === "percent" ? `${item.name} 확률` : `${item.name} 개수`}
+          className="min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm font-black text-slate-950 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
           disabled={isSpinning}
           min="0.01"
           onChange={(event) => onUpdateItemWeight(item.id, Number(event.target.value))}
@@ -693,7 +701,7 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
 
       <button
         type="button"
-        className="col-span-2 min-h-10 rounded-lg border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-700 hover:bg-white disabled:opacity-50 sm:col-span-1"
+        className="col-span-2 min-h-10 w-full self-center rounded-lg border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-700 hover:bg-white disabled:opacity-50 md:col-span-1"
         disabled={isSpinning}
         onClick={() => onRemoveItem(item.id)}
       >
