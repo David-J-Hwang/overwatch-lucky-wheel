@@ -385,7 +385,7 @@ function App() {
               오버워치 당첨 룰렛
             </h1>
           </div>
-          <dl className="grid grid-cols-3 gap-2 text-center text-sm">
+          <dl className="hidden grid-cols-3 gap-2 text-center text-sm sm:grid">
             {roleCounts.map((role) => (
               <div key={role.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <dt className="font-bold text-slate-500">{role.name}</dt>
@@ -484,7 +484,7 @@ function DrawTypeSelector({
         </div>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
         {DRAW_TYPES.map((type) => {
           const active = drawType === type.id;
 
@@ -492,7 +492,7 @@ function DrawTypeSelector({
             <button
               key={type.id}
               type="button"
-              className={`min-h-24 rounded-lg border p-4 text-left transition ${
+              className={`min-h-16 rounded-lg border px-2 py-3 text-center transition sm:min-h-24 sm:p-4 sm:text-left ${
                 active
                   ? "border-orange-400 bg-orange-50 text-slate-950 shadow-sm"
                   : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"
@@ -500,8 +500,10 @@ function DrawTypeSelector({
               disabled={isSpinning}
               onClick={() => onDrawTypeChange(type.id)}
             >
-              <span className="block text-base font-black">{type.name}</span>
-              <span className="mt-2 block text-sm font-semibold leading-5 text-slate-500">{type.description}</span>
+              <span className="block text-sm font-black leading-tight sm:text-base">{type.name}</span>
+              <span className="mt-2 hidden text-sm font-semibold leading-5 text-slate-500 sm:block">
+                {type.description}
+              </span>
             </button>
           );
         })}
@@ -601,10 +603,10 @@ function ItemEditor({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-3 gap-2">
         <button
           type="button"
-          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-700 hover:bg-white disabled:opacity-50"
+          className="whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-black text-slate-700 hover:bg-white disabled:opacity-50 sm:px-3 sm:text-sm"
           disabled={isSpinning || items.length === 0}
           onClick={onApplyEvenWeights}
         >
@@ -612,7 +614,7 @@ function ItemEditor({
         </button>
         <button
           type="button"
-          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black text-slate-700 hover:bg-white disabled:opacity-50"
+          className="whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-black text-slate-700 hover:bg-white disabled:opacity-50 sm:px-3 sm:text-sm"
           disabled={isSpinning}
           onClick={onResetPreset}
         >
@@ -620,7 +622,7 @@ function ItemEditor({
         </button>
         <button
           type="button"
-          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-black text-rose-700 hover:bg-white disabled:opacity-50"
+          className="whitespace-nowrap rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-black text-rose-700 hover:bg-white disabled:opacity-50 sm:px-3 sm:text-sm"
           disabled={isSpinning || items.length === 0}
           onClick={onClearItems}
         >
