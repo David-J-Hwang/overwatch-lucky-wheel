@@ -569,6 +569,8 @@ function ItemEditor({
   const valuePlaceholder = inputMode === "percent" ? "예: 25" : "예: 3";
   const totalLabel = inputMode === "percent" ? "확률 합계" : "총 당첨 개수";
   const totalValue = inputMode === "percent" ? `${formatNumber(totalWeight)}%` : `${formatNumber(totalWeight)}개`;
+  const [isItemListOpen, setIsItemListOpen] = useState(false);
+  const itemListId = "registered-item-list";
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5">
@@ -672,7 +674,21 @@ function ItemEditor({
         {message}
       </p>
 
-      <ul className="mt-2 grid max-h-[520px] gap-2 overflow-y-auto pr-1" aria-label="등록된 항목">
+      <button
+        type="button"
+        className="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-700 hover:bg-white sm:hidden"
+        aria-controls={itemListId}
+        aria-expanded={isItemListOpen}
+        onClick={() => setIsItemListOpen((current) => !current)}
+      >
+        {isItemListOpen ? "목록 가리기" : "목록 보기"}
+      </button>
+
+      <ul
+        id={itemListId}
+        className={`mt-2 max-h-[520px] gap-2 overflow-y-auto pr-1 ${isItemListOpen ? "grid" : "hidden"} sm:grid`}
+        aria-label="등록된 항목"
+      >
         {items.length === 0 ? (
           <li className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500">
             등록된 항목이 없습니다.
