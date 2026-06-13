@@ -376,8 +376,8 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mx-auto grid w-full max-w-7xl gap-5">
+    <main className="min-h-screen px-4 py-5 text-slate-950 sm:px-6 lg:fixed lg:inset-0 lg:h-screen lg:overflow-hidden lg:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-5 lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]">
         <header className="flex flex-col gap-4 rounded-lg border border-white/80 bg-white/75 px-5 py-5 shadow-panel backdrop-blur md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-normal text-orange-600">overwatch-lucky-wheel</p>
@@ -395,8 +395,8 @@ function App() {
           </dl>
         </header>
 
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
-          <div className="grid gap-5">
+        <section className="grid gap-5 lg:min-h-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
+          <div className="grid gap-5 lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]">
             <DrawTypeSelector
               drawType={drawType}
               isSpinning={isSpinning}
@@ -573,7 +573,7 @@ function ItemEditor({
   const itemListId = "registered-item-list";
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 lg:flex lg:min-h-0 lg:flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">항목 설정</h2>
@@ -686,7 +686,7 @@ function ItemEditor({
 
       <ul
         id={itemListId}
-        className={`mt-2 max-h-[520px] gap-2 overflow-y-auto pr-1 ${isItemListOpen ? "grid" : "hidden"} sm:grid`}
+        className={`mt-2 max-h-[520px] auto-rows-max content-start gap-2 overflow-y-auto pr-1 [scrollbar-gutter:stable] lg:min-h-0 lg:max-h-none lg:flex-1 ${isItemListOpen ? "grid" : "hidden"} sm:grid`}
         aria-label="등록된 항목"
       >
         {items.length === 0 ? (
@@ -798,19 +798,19 @@ function WheelPanel({
             className="absolute -top-1 z-10 h-0 w-0 border-x-[16px] border-t-[28px] border-x-transparent border-t-slate-950 drop-shadow-lg"
             aria-hidden="true"
           />
-          <div
-            className={`wheel grid h-full w-full place-items-center rounded-full border-[12px] border-white shadow-[0_24px_55px_rgb(15_23_42_/_22%),inset_0_0_0_1px_rgb(15_23_42_/_16%)] ${
-              isSpinning ? "is-spinning" : ""
-            }`}
-            style={{
-              "--spin-duration": `${spinDuration}ms`,
-              background: wheelGradient,
-              transform: `rotate(${rotation}deg)`,
-            }}
-          >
-            <div className="grid aspect-square w-[28%] place-items-center rounded-full border-[8px] border-white bg-slate-950 text-center text-white shadow-xl">
-              <span className="text-xl font-black">{itemCount}</span>
-            </div>
+          <div className="absolute inset-0 overflow-hidden rounded-full border-[12px] border-white bg-white shadow-[0_24px_55px_rgb(15_23_42_/_22%),inset_0_0_0_1px_rgb(15_23_42_/_16%)]">
+            <div
+              className={`wheel h-full w-full rounded-full ${isSpinning ? "is-spinning" : ""}`}
+              style={{
+                "--spin-duration": `${spinDuration}ms`,
+                background: wheelGradient,
+                transform: `rotate(${rotation}deg)`,
+              }}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="relative z-10 grid aspect-square w-[28%] place-items-center rounded-full border-[8px] border-white bg-slate-950 text-center text-white shadow-xl">
+            <span className="text-xl font-black">{itemCount}</span>
           </div>
         </div>
       </div>
