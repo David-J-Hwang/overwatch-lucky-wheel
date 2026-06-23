@@ -69,7 +69,7 @@ export const HEROES = [
   { id: "mei", name: "Mei", roleId: "damage", color: "#6dabeb" },
   { id: "pharah", name: "Pharah", roleId: "damage", color: "#3c7ecc" },
   { id: "reaper", name: "Reaper", roleId: "damage", color: "#7c3e52" },
-  { id: "sion", name: "Sion", roleId: "damage", color: "#d11b2a" },
+  { id: "sion", name: "Shion", roleId: "damage", color: "#d11b2a" },
   { id: "sojourn", name: "Sojourn", roleId: "damage", color: "#c61c41" },
   { id: "soldier-76", name: "Soldier: 76", roleId: "damage", color: "#6d7995" },
   { id: "sombra", name: "Sombra", roleId: "damage", color: "#765dbd" },

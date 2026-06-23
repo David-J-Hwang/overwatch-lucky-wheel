@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_LANGUAGE, LANGUAGES, TRANSLATIONS } from "./data/localization.js";
 import { DRAW_TYPES, HEROES, ROLES, getPresetItems, getRoleById } from "./data/overwatch.js";
 
 const maxItemCount = 72;
@@ -23,6 +24,96 @@ const segmentColors = [
   "#22c55e",
   "#f59e0b",
 ];
+
+const languageStorageKey = "overwatch-lucky-wheel-language";
+
+function getInitialLanguage() {
+  let savedLanguage = null;
+
+  try {
+    savedLanguage = globalThis.localStorage?.getItem(languageStorageKey);
+  } catch {
+    savedLanguage = null;
+  }
+
+  return LANGUAGES.some((language) => language.id === savedLanguage) ? savedLanguage : DEFAULT_LANGUAGE;
+}
+
+function getTranslation(language) {
+  return TRANSLATIONS[language] ?? TRANSLATIONS[DEFAULT_LANGUAGE];
+}
+
+function getLanguageMeta(language) {
+  return LANGUAGES.find((item) => item.id === language) ?? LANGUAGES[0];
+}
+
+function createMessage(key, params = {}) {
+  return { key, params };
+}
+
+function formatMessage(message, t) {
+  if (!message) {
+    return "";
+  }
+
+  const entry = t.messages[message.key];
+
+  if (!entry) {
+    return "";
+  }
+
+  return typeof entry === "function" ? entry(message.params ?? {}) : entry;
+}
+
+function getRoleText(t, roleId) {
+  return t.roles[roleId] ?? { name: roleId, subtitle: "" };
+}
+
+function getDrawTypeText(t, drawTypeId) {
+  return t.drawTypes[drawTypeId] ?? { name: drawTypeId, description: "" };
+}
+
+function getPresetHeroId(item) {
+  if (item.source !== "preset" || !item.id?.startsWith("hero-")) {
+    return "";
+  }
+
+  return item.id.slice("hero-".length);
+}
+
+function getItemDisplayName(item, t) {
+  if (item.source === "preset" && item.id?.startsWith("role-") && item.roleId) {
+    return getRoleText(t, item.roleId).name;
+  }
+
+  const heroId = getPresetHeroId(item);
+
+  if (heroId) {
+    return t.heroes?.[heroId] ?? item.name;
+  }
+
+  return item.name;
+}
+
+function getItemSubtitle(item, t) {
+  if (item.source === "preset" && item.id?.startsWith("role-") && item.roleId) {
+    return getRoleText(t, item.roleId).subtitle;
+  }
+
+  return item.subtitle ?? "";
+}
+
+function sortItemsByDisplayName(items, t, locale) {
+  const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
+
+  return items
+    .map((item, index) => ({ index, item }))
+    .sort((first, second) => {
+      const compared = collator.compare(getItemDisplayName(first.item, t), getItemDisplayName(second.item, t));
+      return compared || first.index - second.index;
+    })
+    .map(({ item }) => item);
+}
 
 function createId() {
   if (globalThis.crypto?.randomUUID) {
@@ -142,44 +233,38 @@ function getEvenPercentWeights(itemCount) {
   return weights;
 }
 
-function getItemNamePlaceholder(drawType, selectedRoleId) {
+function getItemNamePlaceholder(drawType, selectedRoleId, t) {
   if (drawType === "role") {
-    return "예: 돌격군";
+    return t.itemEditor.placeholders.role;
   }
 
   if (drawType === "allHeroes") {
-    return "예: 레킹볼";
+    return t.itemEditor.placeholders.allHeroes;
   }
 
   if (drawType === "roleHeroes") {
-    if (selectedRoleId === "damage") {
-      return "예: 겐지";
-    }
-
-    if (selectedRoleId === "support") {
-      return "예: 루시우";
-    }
-
-    return "예: 라인하르트";
+    return t.itemEditor.placeholders.roleHeroes[selectedRoleId] ?? t.itemEditor.placeholders.fallback;
   }
 
-  return "예: 랜덤 듀오";
+  return t.itemEditor.placeholders.fallback;
 }
 
 function App() {
+  const [language, setLanguage] = useState(getInitialLanguage);
   const [drawType, setDrawType] = useState("role");
   const [selectedRoleId, setSelectedRoleId] = useState("tank");
   const [inputMode, setInputMode] = useState("count");
   const [items, setItems] = useState(() => getPresetItems("role", "tank"));
   const [newItemName, setNewItemName] = useState("");
   const [newItemWeight, setNewItemWeight] = useState("1");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(null);
   const [winner, setWinner] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const spinTimerRef = useRef(null);
 
-  const selectedDrawType = DRAW_TYPES.find((type) => type.id === drawType);
+  const t = getTranslation(language);
+  const activeLanguage = getLanguageMeta(language);
   const selectedRole = getRoleById(selectedRoleId);
   const totalWeight = useMemo(() => getTotalWeight(items), [items]);
   const invalidWeight = useMemo(() => hasInvalidWeight(items), [items]);
@@ -193,6 +278,17 @@ function App() {
       window.clearTimeout(spinTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = activeLanguage.htmlLang;
+    document.title = t.documentTitle;
+
+    try {
+      globalThis.localStorage?.setItem(languageStorageKey, language);
+    } catch {
+      // Language switching should still work when storage is unavailable.
+    }
+  }, [activeLanguage.htmlLang, language, t.documentTitle]);
 
   const roleCounts = useMemo(
     () =>
@@ -210,12 +306,14 @@ function App() {
     itemCount: items.length,
     totalWeight,
   });
+  const spinDisabledReasonText = formatMessage(spinDisabledReason, t);
+  const messageText = formatMessage(message, t);
 
   function replaceItems(nextDrawType = drawType, nextRoleId = selectedRoleId) {
     setItems(getPresetItems(nextDrawType, nextRoleId));
     setRotation(0);
     setWinner(null);
-    setMessage("");
+    setMessage(null);
   }
 
   function handleDrawTypeChange(nextDrawType) {
@@ -246,7 +344,7 @@ function App() {
 
     setInputMode(nextInputMode);
     setWinner(null);
-    setMessage("");
+    setMessage(null);
   }
 
   function updateItemWeight(itemId, nextWeight) {
@@ -258,7 +356,7 @@ function App() {
       currentItems.map((item) => (item.id === itemId ? { ...item, weight: nextWeight } : item)),
     );
     setWinner(null);
-    setMessage("");
+    setMessage(null);
   }
 
   function removeItem(itemId) {
@@ -268,7 +366,17 @@ function App() {
 
     setItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
     setWinner(null);
-    setMessage("");
+    setMessage(null);
+  }
+
+  function sortItemsByName() {
+    if (items.length < 2 || isSpinning) {
+      return;
+    }
+
+    setItems((currentItems) => sortItemsByDisplayName(currentItems, t, activeLanguage.htmlLang));
+    setWinner(null);
+    setMessage(null);
   }
 
   function addItem(event) {
@@ -283,22 +391,22 @@ function App() {
     const nextTotal = totalWeight + weight;
 
     if (!name) {
-      setMessage("항목 이름을 입력해주세요.");
+      setMessage(createMessage("itemNameRequired"));
       return;
     }
 
     if (!Number.isFinite(weight) || weight <= 0) {
-      setMessage("0보다 큰 값을 입력해주세요.");
+      setMessage(createMessage("positiveWeightRequired"));
       return;
     }
 
     if (items.length >= maxItemCount) {
-      setMessage(`항목은 최대 ${maxItemCount}개까지 추가할 수 있습니다.`);
+      setMessage(createMessage("maxItemsReached", { maxItemCount }));
       return;
     }
 
     if (inputMode === "percent" && nextTotal > 100.01) {
-      setMessage("확률 합계는 100%를 넘을 수 없습니다.");
+      setMessage(createMessage("percentTotalOverflow"));
       return;
     }
 
@@ -315,7 +423,7 @@ function App() {
     setNewItemName("");
     setNewItemWeight(inputMode === "percent" ? "" : "1");
     setWinner(null);
-    setMessage("");
+    setMessage(null);
   }
 
   function applyEvenWeights() {
@@ -336,7 +444,7 @@ function App() {
     }
 
     setWinner(null);
-    setMessage("");
+    setMessage(null);
   }
 
   function clearItems() {
@@ -347,7 +455,7 @@ function App() {
     setItems([]);
     setRotation(0);
     setWinner(null);
-    setMessage("");
+    setMessage(null);
   }
 
   function spinWheel() {
@@ -359,14 +467,14 @@ function App() {
     const winnerSegment = pickWinnerSegment(wheelSegments, totalWeight);
 
     if (!winnerSegment) {
-      setMessage("추첨할 수 있는 항목이 없습니다.");
+      setMessage(createMessage("noDrawableItems"));
       return;
     }
 
     window.clearTimeout(spinTimerRef.current);
     setIsSpinning(true);
     setWinner(null);
-    setMessage("");
+    setMessage(null);
     setRotation((currentRotation) => getTargetRotation(currentRotation, winnerSegment));
 
     spinTimerRef.current = window.setTimeout(() => {
@@ -376,23 +484,19 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-5 text-slate-950 sm:px-6 lg:fixed lg:inset-0 lg:h-screen lg:overflow-hidden lg:px-8">
+    <main className="px-4 pb-8 pt-5 text-slate-950 sm:px-6 sm:pb-10 lg:fixed lg:inset-0 lg:h-screen lg:overflow-hidden lg:px-8 lg:py-5">
       <div className="mx-auto grid w-full max-w-7xl gap-5 lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]">
-        <header className="flex flex-col gap-4 rounded-lg border border-white/80 bg-white/75 px-5 py-5 shadow-panel backdrop-blur md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-normal text-orange-600">overwatch-lucky-wheel</p>
-            <h1 className="mt-1 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
-              오버워치 당첨 룰렛
+        <header className="grid gap-4 rounded-lg border border-white/80 bg-white/75 px-5 py-5 shadow-panel backdrop-blur lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-normal text-orange-600">{t.appEyebrow}</p>
+            <h1 className="mt-1 break-words text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
+              {t.appTitle}
             </h1>
           </div>
-          <dl className="hidden grid-cols-3 gap-2 text-center text-sm sm:grid">
-            {roleCounts.map((role) => (
-              <div key={role.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                <dt className="font-bold text-slate-500">{role.name}</dt>
-                <dd className="text-lg font-black text-slate-950">{role.count}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center lg:flex lg:justify-end">
+            <LanguageToggle language={language} onLanguageChange={setLanguage} t={t} />
+            <RoleStats roleCounts={roleCounts} t={t} />
+          </div>
         </header>
 
         <section className="grid gap-5 lg:min-h-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
@@ -404,15 +508,16 @@ function App() {
               onRoleChange={handleRoleChange}
               roleCounts={roleCounts}
               selectedRoleId={selectedRoleId}
+              t={t}
             />
 
             <ItemEditor
               drawType={drawType}
-              drawTypeName={selectedDrawType?.name ?? ""}
+              drawTypeName={getDrawTypeText(t, drawType).name}
               inputMode={inputMode}
               isSpinning={isSpinning}
               items={items}
-              message={message}
+              message={messageText}
               newItemName={newItemName}
               newItemWeight={newItemWeight}
               onAddItem={addItem}
@@ -423,8 +528,10 @@ function App() {
               onNewItemWeightChange={setNewItemWeight}
               onRemoveItem={removeItem}
               onResetPreset={() => replaceItems()}
+              onSortItems={sortItemsByName}
               onUpdateItemWeight={updateItemWeight}
               selectedRoleId={selectedRoleId}
+              t={t}
               totalWeight={totalWeight}
             />
           </div>
@@ -436,7 +543,8 @@ function App() {
             onSpin={spinWheel}
             rotation={rotation}
             selectedRole={drawType === "roleHeroes" ? selectedRole : null}
-            spinDisabledReason={spinDisabledReason}
+            spinDisabledReason={spinDisabledReasonText}
+            t={t}
             wheelGradient={wheelGradient}
             winner={winner}
             winnerPercent={winnerPercent}
@@ -449,22 +557,63 @@ function App() {
 
 function getSpinDisabledReason({ inputMode, invalidWeight, isSpinning, itemCount, totalWeight }) {
   if (isSpinning) {
-    return "룰렛이 돌아가는 중입니다.";
+    return createMessage("wheelSpinning");
   }
 
   if (itemCount === 0) {
-    return "항목을 먼저 추가해주세요.";
+    return createMessage("addItemsFirst");
   }
 
   if (invalidWeight) {
-    return "모든 항목에 0보다 큰 값을 입력해주세요.";
+    return createMessage("invalidWeight");
   }
 
   if (inputMode === "percent" && !isPercentTotalComplete(totalWeight)) {
-    return "확률 합계가 100%일 때 추첨할 수 있습니다.";
+    return createMessage("percentTotalIncomplete");
   }
 
-  return "";
+  return null;
+}
+
+function LanguageToggle({ language, onLanguageChange, t }) {
+  return (
+    <div
+      className="grid w-full grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 text-sm font-black sm:w-auto"
+      aria-label={t.languageToggleLabel}
+      role="group"
+    >
+      {LANGUAGES.map((item) => {
+        const active = language === item.id;
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            className={`min-h-10 rounded-md px-4 transition ${
+              active ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:bg-white/70"
+            }`}
+            aria-pressed={active}
+            onClick={() => onLanguageChange(item.id)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RoleStats({ roleCounts, t }) {
+  return (
+    <dl className="grid grid-cols-3 gap-2 text-center text-sm">
+      {roleCounts.map((role) => (
+        <div key={role.id} className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 sm:min-w-20">
+          <dt className="truncate text-xs font-bold text-slate-500 sm:text-sm">{getRoleText(t, role.id).name}</dt>
+          <dd className="text-lg font-black leading-tight text-slate-950">{role.count}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 function DrawTypeSelector({
@@ -474,19 +623,21 @@ function DrawTypeSelector({
   onRoleChange,
   roleCounts,
   selectedRoleId,
+  t,
 }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black text-slate-950">뽑기 유형</h2>
-          <p className="mt-1 text-sm font-semibold text-slate-500">기본 항목은 유형에 맞춰 자동으로 채워집니다.</p>
+          <h2 className="text-lg font-black text-slate-950">{t.drawTypeSection.title}</h2>
+          <p className="mt-1 text-sm font-semibold text-slate-500">{t.drawTypeSection.description}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
         {DRAW_TYPES.map((type) => {
           const active = drawType === type.id;
+          const typeText = getDrawTypeText(t, type.id);
 
           return (
             <button
@@ -500,9 +651,9 @@ function DrawTypeSelector({
               disabled={isSpinning}
               onClick={() => onDrawTypeChange(type.id)}
             >
-              <span className="block text-sm font-black leading-tight sm:text-base">{type.name}</span>
+              <span className="block text-sm font-black leading-tight sm:text-base">{typeText.name}</span>
               <span className="mt-2 hidden text-sm font-semibold leading-5 text-slate-500 sm:block">
-                {type.description}
+                {typeText.description}
               </span>
             </button>
           );
@@ -513,6 +664,7 @@ function DrawTypeSelector({
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {roleCounts.map((role) => {
             const active = selectedRoleId === role.id;
+            const roleText = getRoleText(t, role.id);
 
             return (
               <button
@@ -526,13 +678,13 @@ function DrawTypeSelector({
                 disabled={isSpinning}
                 onClick={() => onRoleChange(role.id)}
               >
-                <span className="block text-sm font-black">{role.name}</span>
+                <span className="block text-sm font-black">{roleText.name}</span>
                 <span
                   className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 ${
                     active ? "bg-white/20 text-white ring-white/40" : role.softColor
                   }`}
                 >
-                  {role.count}명
+                  {t.drawTypeSection.roleMemberCount(role.count)}
                 </span>
               </button>
             );
@@ -560,15 +712,22 @@ function ItemEditor({
   onNewItemWeightChange,
   onRemoveItem,
   onResetPreset,
+  onSortItems,
   onUpdateItemWeight,
   selectedRoleId,
+  t,
   totalWeight,
 }) {
-  const itemNamePlaceholder = getItemNamePlaceholder(drawType, selectedRoleId);
-  const valueLabel = inputMode === "percent" ? "당첨 확률(%)" : "당첨 개수";
-  const valuePlaceholder = inputMode === "percent" ? "예: 25" : "예: 3";
-  const totalLabel = inputMode === "percent" ? "확률 합계" : "총 당첨 개수";
-  const totalValue = inputMode === "percent" ? `${formatNumber(totalWeight)}%` : `${formatNumber(totalWeight)}개`;
+  const itemNamePlaceholder = getItemNamePlaceholder(drawType, selectedRoleId, t);
+  const valueLabel = inputMode === "percent" ? t.itemEditor.labels.winningChance : t.itemEditor.labels.winningCount;
+  const valuePlaceholder =
+    inputMode === "percent" ? t.itemEditor.placeholders.valuePercent : t.itemEditor.placeholders.valueCount;
+  const formattedTotalWeight = formatNumber(totalWeight);
+  const totalLabel = inputMode === "percent" ? t.itemEditor.totalChanceLabel : t.itemEditor.totalCountLabel;
+  const totalValue =
+    inputMode === "percent"
+      ? t.itemEditor.totalChanceValue(formattedTotalWeight)
+      : t.itemEditor.totalCountValue(formattedTotalWeight);
   const [isItemListOpen, setIsItemListOpen] = useState(false);
   const itemListId = "registered-item-list";
 
@@ -576,10 +735,12 @@ function ItemEditor({
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 lg:flex lg:min-h-0 lg:flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-950">항목 설정</h2>
+          <h2 className="text-lg font-black text-slate-950">{t.itemEditor.title}</h2>
           <div className="mt-2 flex flex-wrap gap-2 text-sm font-black">
             <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{drawTypeName}</span>
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">등록 항목 {items.length}개</span>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
+              {t.itemEditor.registeredItems(items.length)}
+            </span>
             <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700">
               {totalLabel} {totalValue}
             </span>
@@ -592,7 +753,7 @@ function ItemEditor({
             disabled={isSpinning}
             onClick={() => onInputModeChange("count")}
           >
-            개수
+            {t.itemEditor.inputMode.count}
           </button>
           <button
             type="button"
@@ -600,19 +761,27 @@ function ItemEditor({
             disabled={isSpinning}
             onClick={() => onInputModeChange("percent")}
           >
-            확률
+            {t.itemEditor.inputMode.percent}
           </button>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <button
+          type="button"
+          className="whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-black text-slate-700 hover:bg-white disabled:opacity-50 sm:px-3 sm:text-sm"
+          disabled={isSpinning || items.length < 2}
+          onClick={onSortItems}
+        >
+          {t.itemEditor.actions.sortByName}
+        </button>
         <button
           type="button"
           className="whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-black text-slate-700 hover:bg-white disabled:opacity-50 sm:px-3 sm:text-sm"
           disabled={isSpinning || items.length === 0}
           onClick={onApplyEvenWeights}
         >
-          균등 적용
+          {t.itemEditor.actions.applyEvenWeights}
         </button>
         <button
           type="button"
@@ -620,7 +789,7 @@ function ItemEditor({
           disabled={isSpinning}
           onClick={onResetPreset}
         >
-          기본값 복원
+          {t.itemEditor.actions.resetPreset}
         </button>
         <button
           type="button"
@@ -628,7 +797,7 @@ function ItemEditor({
           disabled={isSpinning || items.length === 0}
           onClick={onClearItems}
         >
-          전체 삭제
+          {t.itemEditor.actions.clearItems}
         </button>
       </div>
 
@@ -637,7 +806,7 @@ function ItemEditor({
         onSubmit={onAddItem}
       >
         <label className="grid min-w-0 gap-1 text-sm font-black text-slate-700">
-          항목 이름
+          {t.itemEditor.labels.itemName}
           <input
             className="min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 font-semibold outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
             disabled={isSpinning || items.length >= maxItemCount}
@@ -666,7 +835,7 @@ function ItemEditor({
           className="min-h-11 self-end rounded-lg bg-orange-500 px-4 font-black text-white transition hover:bg-slate-950 active:bg-slate-950 disabled:opacity-50"
           disabled={isSpinning || items.length >= maxItemCount}
         >
-          추가
+          {t.itemEditor.actions.add}
         </button>
       </form>
 
@@ -681,17 +850,17 @@ function ItemEditor({
         aria-expanded={isItemListOpen}
         onClick={() => setIsItemListOpen((current) => !current)}
       >
-        {isItemListOpen ? "목록 가리기" : "목록 보기"}
+        {isItemListOpen ? t.itemEditor.hideList : t.itemEditor.showList}
       </button>
 
       <ul
         id={itemListId}
         className={`mt-2 max-h-[520px] auto-rows-max content-start gap-2 overflow-y-auto pr-1 [scrollbar-gutter:stable] lg:min-h-0 lg:max-h-none lg:flex-1 ${isItemListOpen ? "grid" : "hidden"} sm:grid`}
-        aria-label="등록된 항목"
+        aria-label={t.itemEditor.itemListAria}
       >
         {items.length === 0 ? (
           <li className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500">
-            등록된 항목이 없습니다.
+            {t.itemEditor.emptyItems}
           </li>
         ) : (
           items.map((item, index) => (
@@ -704,6 +873,7 @@ function ItemEditor({
               onUpdateItemWeight={onUpdateItemWeight}
               totalWeight={totalWeight}
               isSpinning={isSpinning}
+              t={t}
             />
           ))
         )}
@@ -712,12 +882,16 @@ function ItemEditor({
   );
 }
 
-function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdateItemWeight, totalWeight }) {
+function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdateItemWeight, t, totalWeight }) {
   const role = item.roleId ? getRoleById(item.roleId) : null;
+  const roleText = role ? getRoleText(t, role.id) : null;
+  const itemName = getItemDisplayName(item, t);
+  const itemSubtitle = getItemSubtitle(item, t);
   const actualPercent = totalWeight > 0 ? (Number(item.weight) / totalWeight) * 100 : 0;
+  const inputModeLabel = inputMode === "percent" ? t.itemEditor.labels.chance : t.itemEditor.labels.count;
 
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(96px,116px)_72px] md:items-center">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(96px,116px)_84px] md:items-center">
       <span
         className="mt-1 h-10 w-3 rounded-full sm:mt-0"
         style={{ backgroundColor: getItemColor(item, itemIndex, item.source === "preset") }}
@@ -726,22 +900,28 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
       <div className="min-w-0">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <strong className="min-w-0 [overflow-wrap:anywhere] text-base font-black text-slate-950">
-            {item.name}
+            {itemName}
           </strong>
           {role && (
-            <span className={`rounded-full px-2 py-1 text-xs font-black ring-1 ${role.softColor}`}>{role.name}</span>
+            <span className={`rounded-full px-2 py-1 text-xs font-black ring-1 ${role.softColor}`}>
+              {roleText.name}
+            </span>
           )}
-          {item.subtitle && (
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-500">{item.subtitle}</span>
+          {itemSubtitle && (
+            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-500">
+              {itemSubtitle}
+            </span>
           )}
         </div>
-        <p className="mt-1 text-sm font-semibold text-slate-500">당첨확률 {formatPercent(actualPercent)}</p>
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          {t.itemEditor.winningChance(formatPercent(actualPercent))}
+        </p>
       </div>
 
       <label className="col-span-2 grid min-w-0 gap-1 self-center text-xs font-black text-slate-500 md:col-span-1 md:flex md:items-center">
-        <span className="md:sr-only">{inputMode === "percent" ? "확률" : "개수"}</span>
+        <span className="md:sr-only">{inputModeLabel}</span>
         <input
-          aria-label={inputMode === "percent" ? `${item.name} 확률` : `${item.name} 개수`}
+          aria-label={t.itemEditor.weightAria(itemName, inputModeLabel)}
           className="min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm font-black text-slate-950 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100"
           disabled={isSpinning}
           min="0.01"
@@ -754,11 +934,11 @@ function ItemRow({ inputMode, isSpinning, item, itemIndex, onRemoveItem, onUpdat
 
       <button
         type="button"
-        className="col-span-2 min-h-10 w-full self-center rounded-lg border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-700 hover:bg-white disabled:opacity-50 md:col-span-1"
+        className="col-span-2 grid min-h-10 w-full place-items-center self-center rounded-lg border border-rose-200 bg-rose-50 px-2 text-center text-sm font-black text-rose-700 hover:bg-white disabled:opacity-50 md:col-span-1"
         disabled={isSpinning}
         onClick={() => onRemoveItem(item.id)}
       >
-        삭제
+        {t.itemEditor.actions.remove}
       </button>
     </li>
   );
@@ -772,23 +952,26 @@ function WheelPanel({
   rotation,
   selectedRole,
   spinDisabledReason,
+  t,
   wheelGradient,
   winner,
   winnerPercent,
 }) {
-  const spinButtonLabel = isSpinning ? "추첨 중..." : winner ? "다시 추첨" : "추첨하기";
+  const selectedRoleName = selectedRole ? getRoleText(t, selectedRole.id).name : "";
+  const spinButtonLabel = isSpinning ? t.wheel.spinningButton : winner ? t.wheel.spinAgain : t.wheel.spin;
+  const winnerName = winner ? getItemDisplayName(winner, t) : "";
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 lg:sticky lg:top-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-black text-slate-950">룰렛</h2>
+          <h2 className="text-lg font-black text-slate-950">{t.wheel.title}</h2>
           <p className="mt-1 text-sm font-semibold text-slate-500">
-            등록 항목 {itemCount}개{selectedRole ? ` · ${selectedRole.name}` : ""}
+            {t.wheel.registeredItems(itemCount, selectedRoleName)}
           </p>
         </div>
         <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-          {inputMode === "percent" ? "확률 모드" : "개수 모드"}
+          {inputMode === "percent" ? t.wheel.percentMode : t.wheel.countMode}
         </span>
       </div>
 
@@ -828,17 +1011,21 @@ function WheelPanel({
       </div>
 
       <div className="mt-5 grid min-h-32 content-center rounded-lg border border-slate-200 bg-slate-50 p-5 text-center">
-        <p className="text-sm font-black uppercase tracking-normal text-slate-500">당첨 결과</p>
+        <p className="text-sm font-black uppercase tracking-normal text-slate-500">{t.wheel.resultLabel}</p>
         {winner ? (
           <>
-            <strong className="mt-2 break-words text-3xl font-black text-slate-950">{winner.name}</strong>
-            <span className="mt-2 text-sm font-black text-orange-600">당첨확률 {formatPercent(winnerPercent)}</span>
+            <strong className="mt-2 break-words text-3xl font-black text-slate-950">{winnerName}</strong>
+            <span className="mt-2 text-sm font-black text-orange-600">
+              {t.wheel.winningChance(formatPercent(winnerPercent))}
+            </span>
           </>
         ) : (
           <>
-            <strong className="mt-2 text-3xl font-black text-slate-400">{isSpinning ? "추첨 중..." : "-"}</strong>
+            <strong className="mt-2 text-3xl font-black text-slate-400">
+              {isSpinning ? t.wheel.spinning : t.wheel.noResult}
+            </strong>
             <span className="mt-2 text-sm font-bold text-slate-500">
-              {isSpinning ? "룰렛이 멈추면 결과가 표시됩니다." : "아직 추첨 전입니다."}
+              {isSpinning ? t.wheel.waitForResult : t.wheel.notStarted}
             </span>
           </>
         )}
