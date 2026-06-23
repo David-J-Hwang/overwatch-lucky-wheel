@@ -484,9 +484,9 @@ function App() {
   }
 
   return (
-    <main className="px-4 pb-8 pt-5 text-slate-950 sm:px-6 sm:pb-10 lg:fixed lg:inset-0 lg:h-screen lg:overflow-hidden lg:px-8 lg:py-5">
-      <div className="mx-auto grid w-full max-w-7xl gap-5 lg:h-full lg:grid-rows-[auto_minmax(0,1fr)]">
-        <header className="grid gap-4 rounded-lg border border-white/80 bg-white/75 px-5 py-5 shadow-panel backdrop-blur lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+    <main className="min-h-[100dvh] px-4 pb-8 pt-5 text-slate-950 sm:px-6 sm:pb-10 xl:h-[100dvh] xl:min-h-0 xl:overflow-hidden xl:py-5 tablet-landscape:fixed tablet-landscape:inset-0 tablet-landscape:h-[100dvh] tablet-landscape:overflow-hidden tablet-landscape:px-6 tablet-landscape:py-4 2xl:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-5 xl:h-full xl:grid-rows-[auto_minmax(0,1fr)] tablet-landscape:h-full tablet-landscape:grid-rows-[auto_minmax(0,1fr)] tablet-landscape:gap-4">
+        <header className="grid gap-4 rounded-lg border border-white/80 bg-white/75 px-5 py-5 shadow-panel backdrop-blur lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center tablet-landscape:py-4">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-normal text-orange-600">{t.appEyebrow}</p>
             <h1 className="mt-1 break-words text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
@@ -499,8 +499,8 @@ function App() {
           </div>
         </header>
 
-        <section className="grid gap-5 lg:min-h-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
-          <div className="grid gap-5 lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]">
+        <section className="grid gap-5 xl:min-h-0 xl:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] tablet-landscape:min-h-0 tablet-landscape:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] tablet-landscape:gap-4">
+          <div className="grid gap-5 xl:min-h-0 xl:grid-rows-[auto_minmax(0,1fr)] tablet-landscape:min-h-0 tablet-landscape:grid-rows-[auto_minmax(0,1fr)] tablet-landscape:gap-4">
             <DrawTypeSelector
               drawType={drawType}
               isSpinning={isSpinning}
@@ -732,7 +732,7 @@ function ItemEditor({
   const itemListId = "registered-item-list";
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 lg:flex lg:min-h-0 lg:flex-col">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 xl:flex xl:min-h-0 xl:flex-col tablet-landscape:flex tablet-landscape:min-h-0 tablet-landscape:flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">{t.itemEditor.title}</h2>
@@ -855,7 +855,7 @@ function ItemEditor({
 
       <ul
         id={itemListId}
-        className={`mt-2 max-h-[520px] auto-rows-max content-start gap-2 overflow-y-auto pr-1 [scrollbar-gutter:stable] lg:min-h-0 lg:max-h-none lg:flex-1 ${isItemListOpen ? "grid" : "hidden"} sm:grid`}
+        className={`mt-2 max-h-[520px] auto-rows-max content-start gap-2 overflow-y-auto pr-1 [scrollbar-gutter:stable] xl:min-h-0 xl:max-h-none xl:flex-1 tablet-landscape:min-h-0 tablet-landscape:max-h-none tablet-landscape:flex-1 ${isItemListOpen ? "grid" : "hidden"} sm:grid`}
         aria-label={t.itemEditor.itemListAria}
       >
         {items.length === 0 ? (
@@ -962,7 +962,7 @@ function WheelPanel({
   const winnerName = winner ? getItemDisplayName(winner, t) : "";
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 lg:sticky lg:top-5">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel sm:p-5 tablet-landscape:self-start tablet-landscape:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">{t.wheel.title}</h2>
@@ -975,7 +975,7 @@ function WheelPanel({
         </span>
       </div>
 
-      <div className="mx-auto mt-7 grid w-full max-w-[390px] place-items-center">
+      <div className="mx-auto mt-7 grid w-full max-w-[390px] place-items-center tablet-landscape:mt-4 tablet-landscape:max-w-[min(390px,38dvh)]">
         <div className="relative grid aspect-square w-full place-items-center">
           <div
             className="absolute -top-1 z-10 h-0 w-0 border-x-[16px] border-t-[28px] border-x-transparent border-t-slate-950 drop-shadow-lg"
@@ -998,10 +998,10 @@ function WheelPanel({
         </div>
       </div>
 
-      <div className="mt-7 grid gap-3">
+      <div className="mt-7 grid gap-3 tablet-landscape:mt-4 tablet-landscape:gap-2">
         <button
           type="button"
-          className="min-h-12 rounded-lg bg-orange-500 px-5 text-base font-black text-white transition hover:bg-slate-950 disabled:bg-slate-300 disabled:text-slate-500"
+          className="min-h-12 rounded-lg bg-orange-500 px-5 text-base font-black text-white transition hover:bg-slate-950 disabled:bg-slate-300 disabled:text-slate-500 tablet-landscape:min-h-11"
           disabled={Boolean(spinDisabledReason)}
           onClick={onSpin}
         >
@@ -1010,7 +1010,7 @@ function WheelPanel({
         <p className="min-h-5 text-center text-sm font-bold text-slate-500">{spinDisabledReason}</p>
       </div>
 
-      <div className="mt-5 grid min-h-32 content-center rounded-lg border border-slate-200 bg-slate-50 p-5 text-center">
+      <div className="mt-5 grid min-h-32 content-center rounded-lg border border-slate-200 bg-slate-50 p-5 text-center tablet-landscape:mt-3 tablet-landscape:min-h-24 tablet-landscape:p-4">
         <p className="text-sm font-black uppercase tracking-normal text-slate-500">{t.wheel.resultLabel}</p>
         {winner ? (
           <>

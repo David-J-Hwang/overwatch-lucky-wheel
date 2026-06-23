@@ -20,6 +20,7 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    min-height: 100dvh;
     background:
       radial-gradient(circle at top left, rgb(255 183 77 / 22%), transparent 30rem),
       linear-gradient(135deg, #f7f9fc 0%, #e7edf5 46%, #f7f8fb 100%);
